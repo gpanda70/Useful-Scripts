@@ -12,9 +12,9 @@ This program zips one or more directories and names it using today's date
 
 today = datetime.now().strftime('%Y.%m.%d')
 Tk().withdraw()  # I add this to remove additional window that opens with askopenfilename()
-folder_path = askdirectory()
+folder_path = askdirectory(title = "Choose the folder whose content you want to zip")
 folder_name = folder_path.split(r'/')[-1]
-output_path = askdirectory()
+output_path = askdirectory(title = "Choose the folder where you want to save your zip file")
 
 def zip_folder(fp, fn, op):
     """
