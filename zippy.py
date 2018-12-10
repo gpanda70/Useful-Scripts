@@ -6,11 +6,14 @@ from tkinter.filedialog import askopenfilename, askdirectory
 
 """
 
-This program can either Zip or Unzip files and place them in any directory of
-your choosing
-
+This program can either Zip or Unzip files from a directory and place them in
+any output directory of your choosing.
+Note if a subdirectory is empty it won't be zipped.
 """
 
+
+class NoPathChosen(Exception):
+    pass
 
 class Zipper:
     """
@@ -18,63 +21,67 @@ class Zipper:
     in folders
     """
 
-    def __init__(self, input_path, output_path):
+    def __init__(self, input_path='', output_path=''):
         """Default constructor to read in variables"""
         self.input_path = input_path
         self.output_path = output_path
         self.base_input_folder = os.path.basename(input_path)
 
-    @classmethod
-    def from_tkinter(cls):
+        self.zipfile_name = self._name_zipfile()
+        self.zipfile_path = os.path.join(self.output_path, self.zipfile_name)
+        self.zf = ZipFile(self.zipfile_path, 'w')
+
+    def from_tkinter(self):
         """Second constructor used to read in using tkinter"""
         # I add this to remove additional window that opens with askopenfolder
         Tk().withdraw()
-        input_path = askdirectory(title="Choose the folder whose content you want to zip")
-        output_path = askdirectory(title="Choose the folder where you want to save your zip file")
-        base_input_folder = os.path.basename(input_path)
-        return cls(input_path, output_path, base_input_folder)
+        self.input_path = askdirectory(title="Choose the folder whose content you want to zip")
+        self.output_path = askdirectory(title="Choose the folder where you want to save your zip file")
+        self.base_input_folder = os.path.basename(self.input_path)
+
+        self.zipfile_name = self._name_zipfile()
+        self.zipfile_path = os.path.join(self.output_path, self.zipfile_name)
+        self.zf = ZipFile(self.zipfile_path, 'w')
 
     def zip_folder(self):
         """
         This function zips the base input folder at your given output path
-
-        Keyword Arguments:
-        fp(str) -- Folder Path
-        fn(str) -- Folder Name
-        op(str) -- Output Path
-
-        Returns: None
         """
-        zipfile_name = self.name_zipfile()  # zip name
-        zip_path = os.path.join(self.output_path, zipfile_name)
+
+        if not (self.input_path and self.output_path):
+            raise NoPathChosen('Either your input path or output path is empty')
 
         # Traverses through your chosen folder path to zip all the files
         for input_root, input_dir, input_files in os.walk(self.input_path):
             for input_file in input_files:
-                self.write_to_zip_path(input_root, input_file, zip_path)
+                print(input_root)
+                print(input_dir)
+                self._write_to_zipfile_path(input_root, input_dir, input_file)
 
-    def name_zipfile(self):
+    def _name_zipfile(self):
         """
         Combines the folder name with the information you want to zip,
         and new zip file name to create new zipname.
         """
         today_date = datetime.now().strftime('%Y.%m.%d')
-        new_name = '{}_{}.zip'.format(today_date, self.base_input_folder)
-        return new_name
+        zipfile_name = '{}_{}.zip'.format(today_date, self.base_input_folder)
+        return zipfile_name
 
-    def write_to_zip_path(self, root, file, zip_path):
+    def _write_to_zipfile_path(self, root, dir, file):
         """
-        Uses ZipFile object to zip file to new zip_path.
+        Uses ZipFile object to zip file to new zipfile_path.
         """
-        zf = ZipFile(zip_path, 'w')
+
         # Prevents the zip file from adding itself to the archive
-        if file != os.path.basename(zip_path):
-            file_path = os.path.join(root, file)
-            zf.write(file_path, os.path.basename(file_path))
+        if file != os.path.basename(self.zipfile_path):
+            file_path = os.path.join(root, file)  # The full file path
+            file_rel_path = os.path.relpath(file_path, self.input_path)
+            self.zf.write(file_path, file_rel_path)
 
 
 if __name__ == "__main__":
     print('Zipping...')
-    zipper = Zipper.from_tkinter()
+    zipper = Zipper()
+    zipper.from_tkinter()
     zipper.zip_folder()
     print('Done!')
